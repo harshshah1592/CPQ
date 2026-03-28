@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Atlan CPQ — Google Doc Generator (Test Harness)</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0C0E2B;--blue:#3154C4;--blue-light:#EEF2FF;--green:#1D9E75;--green-light:#E1F5EE;
+  --amber:#E89B00;--red:#D63B3B;--purple:#7B2FBE;
+  --text:#0A0C14;--muted:#6B7280;--faint:#9CA3AF;--border:#E5E7EB;--bg:#F9FAFB;--white:#fff;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  --rs:8px;--shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh;padding:32px 20px}
+.page{max-width:720px;margin:0 auto}
+
+/* Header */
+.page-hdr{display:flex;align-items:center;gap:14px;margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.logo{width:32px;height:32px;background:var(--navy);border-radius:8px;display:grid;place-items:center}
+.logo svg{width:18px;height:18px}
+.page-title{font-size:18px;font-weight:600;color:var(--navy);letter-spacing:-.3px}
+.page-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#FFF8E1;color:#92400E;border:1px solid #FCD34D;margin-left:auto}
+
+/* Cards */
+.card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card-title .chip{width:22px;height:22px;border-radius:6px;background:var(--navy);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;flex-shrink:0}
+
+/* Form */
+.field{margin-bottom:12px}
+.lbl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px}
+.lbl span{color:var(--red);margin-left:2px}
+input[type=text],input[type=url],input[type=number],input[type=email],select,textarea{
+  width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--rs);font-family:var(--sans);font-size:13px;color:var(--text);background:var(--white);transition:border-color .15s;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+.mono-input{font-family:var(--mono);font-size:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.hint{font-size:11px;color:var(--faint);margin-top:3px}
+
+/* Line items */
+.li-table{width:100%;border-collapse:collapse;margin-bottom:8px}
+.li-table th{font-size:10px;font-weight:700;color:var(--faint);text-align:left;padding:5px 8px;border-bottom:2px solid var(--border);text-transform:uppercase;letter-spacing:.3px}
+.li-table td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.li-table td input{border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-size:12px;font-family:var(--sans);width:100%}
+.li-table td input:focus{outline:none;border-color:var(--blue)}
+.btn-add-row{font-size:12px;color:var(--blue);background:none;border:none;cursor:pointer;padding:4px 0;font-weight:500}
+.btn-add-row:hover{text-decoration:underline}
+.btn-del{background:none;border:none;cursor:pointer;color:var(--faint);font-size:14px;padding:2px 6px}
+.btn-del:hover{color:var(--red)}
+
+/* Webhook config */
+.webhook-row{display:flex;gap:8px;align-items:flex-end}
+.webhook-row .field{flex:1;margin-bottom:0}
+.btn-test{padding:8px 14px;border-radius:var(--rs);background:var(--blue-light);border:1px solid #C7D2F0;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.btn-test:hover{background:#DDE4F8}
+
+/* Status pills */
+.status{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.status.ok{background:var(--green-light);color:#085041;border:1px solid #A7F3D0}
+.status.err{background:#FEF2F2;color:var(--red);border:1px solid #FECACA}
+.status.pending{background:#EFF6FF;color:var(--blue);border:1px solid #BFDBFE}
+.status.warn{background:#FFF8E1;color:#92400E;border:1px solid #FCD34D}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+
+/* Main generate button */
+.btn-generate{width:100%;padding:14px;border-radius:10px;background:var(--navy);border:none;color:#fff;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:background .15s;letter-spacing:-.1px}
+.btn-generate:hover{background:#1A1D3D}
+.btn-generate:disabled{background:#9CA3AF;cursor:not-allowed}
+.btn-generate svg{width:16px;height:16px;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin .9s linear infinite}
+
+/* Result panel */
+.result-panel{background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:20px;display:none}
+.result-panel.show{display:block}
+.result-hdr{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.result-hdr-title{font-size:13px;font-weight:600}
+.result-body{padding:20px}
+.doc-link{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--green-light);border:1px solid #A7F3D0;border-radius:var(--rs);text-decoration:none;color:#085041;font-weight:600;font-size:13px;margin-bottom:12px;transition:background .12s}
+.doc-link:hover{background:#C6F0E0}
+.doc-link svg{width:18px;height:18px;flex-shrink:0}
+
+/* Payload preview */
+.payload-box{background:#0F1629;border-radius:var(--rs);padding:14px 16px;overflow-x:auto;margin-top:8px}
+.payload-box pre{font-family:var(--mono);font-size:11px;color:#a5f3fc;line-height:1.7;white-space:pre-wrap;word-break:break-all}
+.toggle-payload{font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;padding:4px 0;font-weight:500;display:block;margin-top:6px}
+.toggle-payload:hover{text-decoration:underline}
+
+/* Log */
+.log-box{margin-top:12px;background:#F8FAFC;border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;max-height:140px;overflow-y:auto}
+.log-line{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.8}
+.log-line.ok{color:var(--green)}
+.log-line.err{color:var(--red)}
+
+/* Section divider */
+.divider{font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.8px;margin:20px 0 10px;display:flex;align-items:center;gap:8px}
+.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:14px}
+.tab-btn{font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--sans)}
+.tab-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* Ramp rows */
+.ramp-row{display:grid;grid-template-columns:60px 1fr;gap:8px;align-items:center;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="page-hdr">
+    <div class="logo">
+      <svg viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="6" height="6" rx="1.5" fill="#fff"/><rect x="10" y="2" width="6" height="6" rx="1.5" fill="#fff" opacity=".6"/><rect x="2" y="10" width="6" height="6" rx="1.5" fill="#fff" opacity=".6"/><rect x="10" y="10" width="6" height="6" rx="1.5" fill="#3154C4"/></svg>
+    </div>
+    <div>
+      <div class="page-title">Google Doc Generator — Test Harness</div>
+      <div class="page-sub">Standalone test · does not affect the main CPQ tool</div>
+    </div>
+    <div class="badge">⚗ Sandbox</div>
+  </div>
+
+  <!-- Step 1: Zapier Webhook URL -->
+  <div class="card">
+    <div class="card-title"><div class="chip">1</div>Zapier webhook URL</div>
+    <div class="webhook-row">
+      <div class="field">
+        <label class="lbl">Webhook URL <span>*</span></label>
+        <input type="url" id="webhookUrl" class="mono-input" placeholder="https://hooks.zapier.com/hooks/catch/xxxxxxx/xxxxxxx/" value=""/>
+        <div class="hint">Paste the URL from your Zap's "Catch Hook" trigger step</div>
+      </div>
+      <button class="btn-test" onclick="testWebhook()">Ping ↗</button>
+    </div>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+      <span id="webhookStatus"></span>
+    </div>
+
+    <div class="divider" style="margin-top:16px">Zapier setup checklist</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer"><input type="checkbox" id="chk1" style="accent-color:var(--blue);width:13px;height:13px"/> Zap trigger: <strong>Webhooks by Zapier → Catch Hook</strong></label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer"><input type="checkbox" id="chk2" style="accent-color:var(--blue);width:13px;height:13px"/> Action: <strong>Google Docs → Create Document from Template</strong></label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer"><input type="checkbox" id="chk3" style="accent-color:var(--blue);width:13px;height:13px"/> Template doc has placeholders matching the payload fields below</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer"><input type="checkbox" id="chk4" style="accent-color:var(--blue);width:13px;height:13px"/> Zap is turned <strong>ON</strong></label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer"><input type="checkbox" id="chk5" style="accent-color:var(--blue);width:13px;height:13px"/> Response type set to return the created Doc URL (optional but ideal)</label>
+    </div>
+  </div>
+
+  <!-- Step 2: Quote data -->
+  <div class="card">
+    <div class="card-title"><div class="chip">2</div>Quote data (sample payload)</div>
+    <div class="tabs">
+      <button class="tab-btn active" id="tabManual" onclick="switchDataTab('manual')">Manual entry</button>
+      <button class="tab-btn" id="tabJSON" onclick="switchDataTab('json')">Raw JSON</button>
+    </div>
+
+    <div id="manualPane">
+      <div class="divider">Customer</div>
+      <div class="g2">
+        <div class="field"><label class="lbl">Legal company name</label><input type="text" id="f_legal" value="Acme Corp Ltd."/></div>
+        <div class="field"><label class="lbl">Billing address</label><input type="text" id="f_billing" value="123 Main St, New York, NY 10001"/></div>
+        <div class="field"><label class="lbl">Primary contact</label><input type="text" id="f_contact" value="Jane Smith"/></div>
+        <div class="field"><label class="lbl">Contact email</label><input type="email" id="f_email" value="jane@acme.com"/></div>
+      </div>
+
+      <div class="divider">Contract</div>
+      <div class="g3">
+        <div class="field"><label class="lbl">Start date</label><input type="text" id="f_startDate" value="2026-04-01"/></div>
+        <div class="field"><label class="lbl">Term (months)</label><input type="number" id="f_term" value="12"/></div>
+        <div class="field"><label class="lbl">Currency</label>
+          <select id="f_currency"><option>USD</option><option>GBP</option><option>EUR</option></select></div>
+        <div class="field"><label class="lbl">Atlan entity</label>
+          <select id="f_entity"><option>Atlan USA</option><option>Atlan Singapore</option><option>Atlan India</option></select></div>
+        <div class="field"><label class="lbl">Payment terms</label>
+          <select id="f_payTerms"><option>Net 30</option><option>Net 45</option><option>Net 60</option><option>Net 90</option></select></div>
+        <div class="field"><label class="lbl">Billing frequency</label>
+          <select id="f_billFreq"><option>Annual</option><option>Semi-Annual</option><option>Quarterly</option></select></div>
+      </div>
+
+      <div class="divider">Line items</div>
+      <table class="li-table">
+        <thead><tr><th style="width:35%">Product</th><th>List price</th><th>Net price</th><th>Disc %</th><th style="width:30px"></th></tr></thead>
+        <tbody id="lineItemsBody"></tbody>
+      </table>
+      <button class="btn-add-row" onclick="addLineItem()">+ Add line item</button>
+
+      <div class="divider">Totals & approval</div>
+      <div class="g3">
+        <div class="field"><label class="lbl">Total list ARR</label><input type="number" id="f_totalList" value="380000"/></div>
+        <div class="field"><label class="lbl">Total net ARR</label><input type="number" id="f_totalNet" value="320000"/></div>
+        <div class="field"><label class="lbl">Blended disc %</label><input type="number" id="f_disc" value="15.8"/></div>
+        <div class="field"><label class="lbl">Approved by</label><input type="text" id="f_approvedBy" value="Jim Walsh (CRO)"/></div>
+        <div class="field"><label class="lbl">SFDC Opp ID</label><input type="text" id="f_sfdcId" value="006Hs00000AA1111AAA" class="mono-input"/></div>
+        <div class="field"><label class="lbl">Quote ID</label><input type="text" id="f_quoteId" value="ATL-4521" class="mono-input"/></div>
+      </div>
+
+      <div class="divider">Ramp years <span style="font-size:11px;color:var(--faint);font-weight:400;margin-left:6px">(leave blank if not a ramp deal)</span></div>
+      <div id="rampRows"></div>
+      <button class="btn-add-row" onclick="addRampYear()">+ Add ramp year</button>
+    </div>
+
+    <div id="jsonPane" style="display:none">
+      <div class="field">
+        <label class="lbl">Paste or edit raw JSON payload</label>
+        <textarea id="rawJson" rows="18" class="mono-input" style="font-size:11px;line-height:1.7"></textarea>
+        <div class="hint">This is exactly what gets sent to Zapier. Edit freely — useful for testing edge cases.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Generate -->
+  <div class="card">
+    <div class="card-title"><div class="chip">3</div>Generate & test</div>
+
+    <div style="margin-bottom:14px;padding:10px 12px;background:#FFF8E1;border:1px solid #FCD34D;border-radius:var(--rs);font-size:12px;color:#92400E">
+      ⚠ <strong>Important:</strong> Your Zap must be <strong>turned ON</strong> before clicking Generate. Zapier won't receive the webhook if the Zap is in draft mode.
+    </div>
+
+    <button class="btn-generate" id="btnGenerate" onclick="generate()">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Generate Google Doc
+    </button>
+  </div>
+
+  <!-- Result -->
+  <div class="result-panel" id="resultPanel">
+    <div class="result-hdr">
+      <span id="resultIcon" style="font-size:18px">📄</span>
+      <span class="result-hdr-title" id="resultTitle">Result</span>
+      <span id="resultStatus" style="margin-left:auto"></span>
+    </div>
+    <div class="result-body">
+      <div id="docLinkWrap" style="display:none">
+        <a id="docLink" class="doc-link" href="#" target="_blank">
+          <svg viewBox="0 0 18 18" fill="none"><rect x="3" y="1" width="12" height="16" rx="2" stroke="#085041" stroke-width="1.2"/><path d="M6 6h6M6 9h6M6 12h4" stroke="#085041" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Open Google Doc →
+        </a>
+      </div>
+      <div id="noUrlNote" style="display:none;font-size:12px;color:var(--muted);padding:8px 0;margin-bottom:10px">
+        Zapier received the data but didn't return a Doc URL. Check your Zap's response settings, or find the doc in your Google Drive.
+      </div>
+
+      <button class="toggle-payload" onclick="togglePayload()">Show sent payload ▾</button>
+      <div id="payloadWrap" style="display:none">
+        <div class="payload-box"><pre id="payloadPre"></pre></div>
+      </div>
+
+      <div class="divider" style="margin-top:14px">Request log</div>
+      <div class="log-box" id="logBox"></div>
+    </div>
+  </div>
+
+  <!-- Placeholder reference -->
+  <div class="card" style="margin-top:20px">
+    <div class="card-title"><div class="chip" style="background:var(--purple)">?</div>Google Docs template placeholders</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Copy these into your Google Docs template exactly as shown. Zapier replaces them with the live values.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="placeholderGrid"></div>
+  </div>
+
+</div>
+
+<script>
+// ── Default line items ──────────────────────────────────────────────
+var lineItems = [
+  {name:'Platform — Enterprise', list:200000, net:160000, disc:20.0},
+  {name:'Users — Admin (×15)',    list:36000,  net:32400,  disc:10.0},
+  {name:'Users — Member (×50)',   list:75000,  net:63750,  disc:15.0},
+  {name:'Data Products (Add-on)', list:28650,  net:28650,  disc:0.0},
+];
+var rampYears = [];
+var payloadShown = false;
+var dataTab = 'manual';
+
+// ── Payload fields reference ────────────────────────────────────────
+var placeholders = [
+  ['{{quote_id}}',       'Quote ID (ATL-XXXX)'],
+  ['{{sfdc_opp_id}}',    'Salesforce Opportunity ID'],
+  ['{{legal_name}}',     'Customer legal company name'],
+  ['{{billing_address}}','Customer billing address'],
+  ['{{contact_name}}',   'Primary contact name'],
+  ['{{contact_email}}',  'Primary contact email'],
+  ['{{atlan_entity}}',   'Atlan contracting entity'],
+  ['{{start_date}}',     'Contract start date'],
+  ['{{term_months}}',    'Contract term in months'],
+  ['{{currency}}',       'Currency (USD/GBP/EUR)'],
+  ['{{pay_terms}}',      'Payment terms (Net 30 etc)'],
+  ['{{bill_freq}}',      'Billing frequency'],
+  ['{{total_list_arr}}', 'Total list ARR (formatted)'],
+  ['{{total_net_arr}}',  'Total net ARR (formatted)'],
+  ['{{discount_pct}}',   'Blended discount %'],
+  ['{{approved_by}}',    'Approver name & title'],
+  ['{{line_items_text}}','All line items as plain text'],
+  ['{{ramp_text}}',      'Ramp schedule as plain text'],
+  ['{{today_date}}',     'Today\'s date'],
+];
+
+function renderPlaceholders(){
+  var g = document.getElementById('placeholderGrid');
+  g.innerHTML = placeholders.map(function(p){
+    return '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#F8FAFC;border-radius:6px;border:1px solid var(--border)">'
+      +'<code style="font-size:10px;font-family:var(--mono);color:#3154C4;flex:1">'+p[0]+'</code>'
+      +'<span style="font-size:10px;color:var(--muted)">'+p[1]+'</span>'
+      +'</div>';
+  }).join('');
+}
+
+function renderLineItems(){
+  var tbody = document.getElementById('lineItemsBody');
+  tbody.innerHTML = lineItems.map(function(li, i){
+    return '<tr>'
+      +'<td><input type="text" value="'+escHtml(li.name)+'" onchange="lineItems['+i+'].name=this.value" style="min-width:180px"/></td>'
+      +'<td><input type="number" value="'+li.list+'" onchange="lineItems['+i+'].list=parseFloat(this.value)||0" style="width:100px"/></td>'
+      +'<td><input type="number" value="'+li.net+'" onchange="lineItems['+i+'].net=parseFloat(this.value)||0;lineItems['+i+'].disc=li.list>0?Math.round((li.list-li.net)/li.list*1000)/10:0" style="width:100px"/></td>'
+      +'<td><input type="number" value="'+li.disc+'" onchange="lineItems['+i+'].disc=parseFloat(this.value)||0" style="width:60px"/></td>'
+      +'<td><button class="btn-del" onclick="lineItems.splice('+i+',1);renderLineItems()">✕</button></td>'
+      +'</tr>';
+  }).join('');
+}
+
+function addLineItem(){
+  lineItems.push({name:'New product', list:0, net:0, disc:0});
+  renderLineItems();
+  var rows = document.querySelectorAll('#lineItemsBody tr');
+  if(rows.length) rows[rows.length-1].querySelector('input').focus();
+}
+
+function renderRampYears(){
+  var div = document.getElementById('rampRows');
+  if(!rampYears.length){ div.innerHTML='<div style="font-size:12px;color:var(--faint);padding:4px 0 8px">No ramp years added. Click + Add ramp year if this is a ramp deal.</div>'; return; }
+  div.innerHTML = rampYears.map(function(r,i){
+    return '<div class="ramp-row">'
+      +'<div style="font-size:12px;font-weight:600;color:var(--muted)">Year '+(i+1)+'</div>'
+      +'<div style="display:flex;gap:8px;align-items:center">'
+      +'<input type="number" value="'+r.net+'" placeholder="Net ARR" onchange="rampYears['+i+'].net=parseFloat(this.value)||0" style="width:130px"/>'
+      +'<span style="font-size:11px;color:var(--faint)">net ARR</span>'
+      +'<button class="btn-del" onclick="rampYears.splice('+i+',1);renderRampYears()">✕</button>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function addRampYear(){
+  rampYears.push({year:rampYears.length+1, net:0});
+  renderRampYears();
+}
+
+function fmt(n){ return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n||0); }
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function buildPayload(){
+  var legal    = document.getElementById('f_legal').value;
+  var billing  = document.getElementById('f_billing').value;
+  var contact  = document.getElementById('f_contact').value;
+  var email    = document.getElementById('f_email').value;
+  var start    = document.getElementById('f_startDate').value;
+  var term     = document.getElementById('f_term').value;
+  var currency = document.getElementById('f_currency').value;
+  var entity   = document.getElementById('f_entity').value;
+  var payTerms = document.getElementById('f_payTerms').value;
+  var billFreq = document.getElementById('f_billFreq').value;
+  var tList    = parseFloat(document.getElementById('f_totalList').value)||0;
+  var tNet     = parseFloat(document.getElementById('f_totalNet').value)||0;
+  var disc     = parseFloat(document.getElementById('f_disc').value)||0;
+  var approvedBy = document.getElementById('f_approvedBy').value;
+  var sfdcId   = document.getElementById('f_sfdcId').value;
+  var quoteId  = document.getElementById('f_quoteId').value;
+
+  // Build human-readable line items text for Google Docs
+  var liText = lineItems.map(function(li,i){
+    return (i+1)+'. '+li.name+' — List: '+fmt(li.list)+' | Net: '+fmt(li.net)+' | Disc: '+li.disc.toFixed(1)+'%';
+  }).join('\n');
+
+  var rampText = rampYears.length
+    ? rampYears.map(function(r,i){ return 'Year '+(i+1)+': '+fmt(r.net)+' net ARR'; }).join('\n')
+    : 'Non-ramp deal';
+
+  var today = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+
+  return {
+    quote_id:       quoteId,
+    sfdc_opp_id:    sfdcId,
+    legal_name:     legal,
+    billing_address:billing,
+    contact_name:   contact,
+    contact_email:  email,
+    atlan_entity:   entity,
+    start_date:     start,
+    term_months:    parseInt(term)||12,
+    currency:       currency,
+    pay_terms:      payTerms,
+    bill_freq:      billFreq,
+    total_list_arr: fmt(tList),
+    total_net_arr:  fmt(tNet),
+    discount_pct:   disc.toFixed(1)+'%',
+    approved_by:    approvedBy,
+    line_items:     lineItems,
+    line_items_text:liText,
+    ramp_years:     rampYears,
+    ramp_text:      rampText,
+    today_date:     today,
+    generated_at:   new Date().toISOString(),
+  };
+}
+
+function switchDataTab(tab){
+  dataTab = tab;
+  document.getElementById('tabManual').className = 'tab-btn'+(tab==='manual'?' active':'');
+  document.getElementById('tabJSON').className   = 'tab-btn'+(tab==='json'?' active':'');
+  document.getElementById('manualPane').style.display = tab==='manual'?'':'none';
+  document.getElementById('jsonPane').style.display   = tab==='json'?'':'none';
+  if(tab==='json'){
+    document.getElementById('rawJson').value = JSON.stringify(buildPayload(), null, 2);
+  }
+}
+
+function getPayload(){
+  if(dataTab==='json'){
+    try{ return JSON.parse(document.getElementById('rawJson').value); }
+    catch(e){ return null; }
+  }
+  return buildPayload();
+}
+
+function addLog(msg, type){
+  var box = document.getElementById('logBox');
+  var d = document.createElement('div');
+  d.className = 'log-line'+(type?' '+type:'');
+  d.textContent = new Date().toLocaleTimeString()+' — '+msg;
+  box.insertBefore(d, box.firstChild);
+}
+
+function setWebhookStatus(type, msg){
+  var el = document.getElementById('webhookStatus');
+  el.innerHTML = '<span class="status '+type+'"><span class="dot"></span>'+msg+'</span>';
+}
+
+async function testWebhook(){
+  var url = document.getElementById('webhookUrl').value.trim();
+  if(!url){ setWebhookStatus('err','Enter a webhook URL first'); return; }
+  setWebhookStatus('pending','Pinging...');
+  try{
+    var res = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({_test:true, source:'atlan-cpq-test-harness', timestamp:new Date().toISOString()})
+    });
+    if(res.ok){ setWebhookStatus('ok','Webhook reachable ('+res.status+')'); }
+    else{ setWebhookStatus('warn','Got '+res.status+' — check Zap is ON'); }
+  }catch(e){
+    setWebhookStatus('err','Network error: '+e.message);
+  }
+}
+
+async function generate(){
+  var url = document.getElementById('webhookUrl').value.trim();
+  if(!url){ alert('Paste your Zapier webhook URL in Step 1 first.'); return; }
+
+  var payload = getPayload();
+  if(!payload){ alert('JSON payload is invalid — check the Raw JSON tab for syntax errors.'); return; }
+
+  var btn = document.getElementById('btnGenerate');
+  btn.disabled = true;
+  btn.innerHTML = '<svg viewBox="0 0 16 16" fill="none" class="spin"><path d="M14 8A6 6 0 112 8" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg> Sending to Zapier...';
+
+  var panel = document.getElementById('resultPanel');
+  panel.className = 'result-panel show';
+  document.getElementById('docLinkWrap').style.display='none';
+  document.getElementById('noUrlNote').style.display='none';
+  document.getElementById('payloadPre').textContent = JSON.stringify(payload, null, 2);
+
+  addLog('Sending payload to Zapier webhook...');
+
+  try{
+    var res = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+
+    var bodyText = await res.text();
+    addLog('Response: HTTP '+res.status+' — '+bodyText.slice(0,120), res.ok?'ok':'err');
+
+    // Try to parse a doc URL from the response
+    var docUrl = null;
+    try{
+      var json = JSON.parse(bodyText);
+      // Common Zapier response patterns
+      docUrl = json.doc_url || json.docUrl || json.url || json.google_doc_url
+             || json.data?.doc_url || json.data?.url || null;
+    }catch(e){}
+
+    if(res.ok){
+      document.getElementById('resultIcon').textContent = '✅';
+      document.getElementById('resultTitle').textContent = 'Zapier received the payload';
+      document.getElementById('resultStatus').innerHTML = '<span class="status ok"><span class="dot"></span>Success</span>';
+      addLog('Zapier received the data. Check your Zap task history to confirm Google Doc was created.', 'ok');
+
+      if(docUrl){
+        document.getElementById('docLink').href = docUrl;
+        document.getElementById('docLinkWrap').style.display = 'block';
+        addLog('Google Doc URL received: '+docUrl, 'ok');
+      } else {
+        document.getElementById('noUrlNote').style.display = 'block';
+        addLog('No Doc URL in response. If your Zap returns the URL, add a "Return Response" step in Zapier.', '');
+      }
+    } else {
+      document.getElementById('resultIcon').textContent = '❌';
+      document.getElementById('resultTitle').textContent = 'Zapier returned an error';
+      document.getElementById('resultStatus').innerHTML = '<span class="status err"><span class="dot"></span>HTTP '+res.status+'</span>';
+      addLog('Error response: '+bodyText.slice(0,200), 'err');
+    }
+  }catch(e){
+    document.getElementById('resultIcon').textContent = '❌';
+    document.getElementById('resultTitle').textContent = 'Network error';
+    document.getElementById('resultStatus').innerHTML = '<span class="status err"><span class="dot"></span>Failed</span>';
+    addLog('Fetch error: '+e.message, 'err');
+    addLog('Tip: If you see a CORS error, Zapier may still have received the payload — check your Zap task history.', '');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Generate Google Doc';
+  }
+}
+
+function togglePayload(){
+  payloadShown = !payloadShown;
+  document.getElementById('payloadWrap').style.display = payloadShown?'block':'none';
+  document.querySelector('.toggle-payload').textContent = payloadShown?'Hide sent payload ▴':'Show sent payload ▾';
+}
+
+// ── Init ────────────────────────────────────────────────────────────
+renderLineItems();
+renderRampYears();
+renderPlaceholders();
+</script>
+</body>
+</html>
